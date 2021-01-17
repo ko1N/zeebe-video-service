@@ -63,7 +63,7 @@ func WorkerHandler(client zbc.Client, handler func(ctx *WorkerContext) error) fu
 		}
 		err = handler(&workerContext)
 		if err != nil {
-			fmt.Printf("Failed to execute job: %s\n", err.Error())
+			tracker.Crit("job failed with error", "error", err)
 			failJob(jobClient, job)
 			return
 		}
