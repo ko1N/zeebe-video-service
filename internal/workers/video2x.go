@@ -15,16 +15,16 @@ import (
 	"github.com/ko1N/zeebe-video-service/internal/storage"
 )
 
-func RegisterRifeWorker(client zbc.Client) worker.JobWorker {
+func RegisterVideo2xWorker(client zbc.Client) worker.JobWorker {
 	return client.
 		NewJobWorker().
-		JobType("rife-service").
-		Handler(WorkerHandler(client, rifeHandler)).
+		JobType("video2x-service").
+		Handler(WorkerHandler(client, video2xHandler)).
 		Concurrency(1).
 		Open()
 }
 
-func rifeHandler(ctx *WorkerContext) error {
+func video2xHandler(ctx *WorkerContext) error {
 	source := ctx.Variables["source"]
 	if source == "" {
 		return fmt.Errorf("`source` variable must not be empty")
@@ -52,10 +52,15 @@ func rifeHandler(ctx *WorkerContext) error {
 	}
 
 	// Options:
-	// exp (ratio): 1,2,3,...
-	// skip: true/false (skip static frames)
+	// driver: ...
+	// ratio: 2,3,4,...
 
 	// parse arguments
+	driver := ctx.Headers["driver"]
+	if driver == "" {
+		driver = "anime4kcpp"
+	}
+
 	ratio, err := strconv.Atoi(ctx.Headers["ratio"])
 	if err != nil {
 		return fmt.Errorf("failed to convert 'ratio' header to integer: %s", err.Error())
@@ -63,17 +68,13 @@ func rifeHandler(ctx *WorkerContext) error {
 	if ratio < 2 {
 		return fmt.Errorf("invalid 'ratio' header: ratio must be greater or equal to 2")
 	}
-	skip := false
-	if ctx.Headers["skip"] == "true" {
-		skip = true
-	}
-	ctx.Tracker.Info("rife settings", "ratio", ratio, "skip", skip)
+	ctx.Tracker.Info("video2x settings", "driver", driver, "ratio", ratio)
 
-	// rife - hardcoded output file name (see build/rife-service.dockerfile) for the corresponding hack!
-	outfile := fmt.Sprintf("%s_upsampled%s", strings.TrimSuffix(file, filepath.Ext(file)), filepath.Ext(file))
-	err = services.ExecuteRife(ctx.ServiceContext, ratio-1, skip, file, outfile)
+	// run video2x
+	outfile := fmt.Sprintf("%s_upscaled%s", strings.TrimSuffix(file, filepath.Ext(file)), filepath.Ext(file))
+	err = services.ExecuteVideo2x(ctx.ServiceContext, driver, ratio, file, outfile)
 	if err != nil {
-		return fmt.Errorf("rife failed: %s", err.Error())
+		return fmt.Errorf("video2x failed: %s", err.Error())
 	}
 
 	// upload file
@@ -85,6 +86,6 @@ func rifeHandler(ctx *WorkerContext) error {
 
 	url.Path = path.Join(dir, outfile)
 	ctx.Variables["output"] = url.String()
-	ctx.Tracker.Info("rife successful", "output", ctx.Variables["output"])
+	ctx.Tracker.Info("video2x successful", "output", ctx.Variables["output"])
 	return nil
 }

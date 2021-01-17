@@ -1,19 +1,41 @@
 package services
 
-import "path/filepath"
+import (
+	"fmt"
+	"path/filepath"
+	"strconv"
+)
 
-func ExecuteRife(ctx *ServiceContext, filename string) error {
+func ExecuteRife(ctx *ServiceContext, ratio int, skip bool, filename string, outputfilename string) error {
 	fullfilename, err := filepath.Abs(ctx.Environment.FullPath(filename))
 	if err != nil {
 		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
 		return err
 	}
 
-	ctx.Tracker.Info("rife input file", "fullfilename", fullfilename)
+	fulloutputfilename, err := filepath.Abs(ctx.Environment.FullPath(outputfilename))
+	if err != nil {
+		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
+		return err
+	}
 
-	// probe inputs
+	ctx.Tracker.Info("rife files", "input", fullfilename, "output", fulloutputfilename)
+
+	skipcmd := ""
+	if skip {
+		skipcmd = "--skip"
+	}
+	ctx.Tracker.Info("rife frame skipping", "skip", skip)
+
+	// upsample input
 	_, err = ctx.Environment.Execute(
-		append([]string{}, "rife --exp=1 --video=\""+fullfilename+"\""), nil, nil)
+		append([]string{}, "inference_video --exp="+strconv.Itoa(ratio)+" "+skipcmd+" --video=\""+fullfilename+"\" --output=\""+fulloutputfilename+"\""),
+		func(outmsg string) {
+			fmt.Println("rife stdout:", outmsg)
+		},
+		func(errmsg string) {
+			fmt.Println("rife stderr:", errmsg)
+		})
 	if err != nil {
 		ctx.Tracker.Crit("unable to execute rife", "error", err)
 		return err

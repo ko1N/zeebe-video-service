@@ -6,6 +6,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// TODO: allow configuration of video2x, rife, ffmpeg binary locations here!
+
 type Config struct {
 	Zeebe ZeebeConfig `yaml:"zeebe"`
 }

@@ -1,0 +1,6 @@
+- file uploading on rife, ffmpeg
+- file download/upload
+- watchfolder service
+- configuration of python binaries
+- zero-copy file handling
+- set output filename on ffmpeg + handle multiple inputs

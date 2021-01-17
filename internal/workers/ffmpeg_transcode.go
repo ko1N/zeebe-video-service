@@ -31,9 +31,13 @@ type FFMpegArgs struct {
 
 func ffmpegTranscodeHandler(ctx *WorkerContext) error {
 	source := ctx.Variables["source"]
+	if source == "" {
+		return fmt.Errorf("`source` variable must not be empty")
+	}
+
 	url, err := url.Parse(source.(string))
 	if err != nil {
-		return fmt.Errorf("unable to get `source` variable: %s", err.Error())
+		return fmt.Errorf("unable to parse url in `source` variable: %s", err.Error())
 	}
 
 	ctx.Tracker.Info("connecting to storage at", "source", source)
@@ -44,8 +48,9 @@ func ffmpegTranscodeHandler(ctx *WorkerContext) error {
 
 	dir, file := filepath.Split(url.Path)
 	bucket := strings.TrimLeft(path.Clean(dir), "/")
-	ctx.Tracker.Info("downloading from bucket", "bucket", bucket, "file", file)
 
+	// download file
+	ctx.Tracker.Info("downloading from bucket", "bucket", bucket, "file", file)
 	err = store.GetFile(bucket, file, file)
 	if err != nil {
 		return fmt.Errorf("failed to download file from storage: %s", err.Error())
