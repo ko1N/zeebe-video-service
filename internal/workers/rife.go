@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/zbc"
@@ -20,6 +21,7 @@ func RegisterRifeWorker(client zbc.Client) worker.JobWorker {
 		NewJobWorker().
 		JobType("rife-service").
 		Handler(WorkerHandler(client, rifeHandler)).
+		Timeout(24 * time.Hour).
 		Concurrency(1).
 		Open()
 }

@@ -37,7 +37,10 @@ func ExecuteVideo2x(ctx *ServiceContext, driver string, ratio int, filename stri
 
 	// upscale input
 	_, err = ctx.Environment.Execute(
-		append([]string{}, "python3.8 /video2x/src/video2x.py -d "+driver+" -r "+strconv.Itoa(ratio)+" -i \""+fullfilename+"\" -o \""+fulloutputfilename+"\""), nil, nil)
+		append([]string{}, "python3.8 /video2x/src/video2x.py -d "+driver+" -r "+strconv.Itoa(ratio)+" -i \""+fullfilename+"\" -o \""+fulloutputfilename+"\""),
+		func(outmsg string) {
+			ctx.Tracker.Info(outmsg, "stream", "stdout")
+		}, nil)
 	if err != nil {
 		ctx.Tracker.Crit("unable to execute video2x", "error", err)
 		return err

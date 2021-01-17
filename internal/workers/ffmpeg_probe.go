@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/zbc"
@@ -19,6 +20,7 @@ func RegisterFFmpegProbeWorker(client zbc.Client) worker.JobWorker {
 		NewJobWorker().
 		JobType("ffmpeg-probe-service").
 		Handler(WorkerHandler(client, ffmpegProbeHandler)).
+		Timeout(1 * time.Hour).
 		Concurrency(8).
 		Open()
 }

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 )
@@ -25,16 +24,15 @@ func ExecuteRife(ctx *ServiceContext, ratio int, skip bool, filename string, out
 	if skip {
 		skipcmd = "--skip"
 	}
-	ctx.Tracker.Info("rife frame skipping", "skip", skip)
 
 	// upsample input
 	_, err = ctx.Environment.Execute(
 		append([]string{}, "inference_video --exp="+strconv.Itoa(ratio)+" "+skipcmd+" --video=\""+fullfilename+"\" --output=\""+fulloutputfilename+"\""),
 		func(outmsg string) {
-			fmt.Println("rife stdout:", outmsg)
+			ctx.Tracker.Info(outmsg, "stream", "stdout")
 		},
 		func(errmsg string) {
-			fmt.Println("rife stderr:", errmsg)
+			ctx.Tracker.Info(errmsg, "stream", "stderr")
 		})
 	if err != nil {
 		ctx.Tracker.Crit("unable to execute rife", "error", err)

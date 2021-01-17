@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/zbc"
@@ -21,6 +22,7 @@ func RegisterFFmpegTranscodeWorker(client zbc.Client) worker.JobWorker {
 		NewJobWorker().
 		JobType("ffmpeg-transcode-service").
 		Handler(WorkerHandler(client, ffmpegTranscodeHandler)).
+		Timeout(24 * time.Hour).
 		Concurrency(1).
 		Open()
 }

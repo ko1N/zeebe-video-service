@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/zbc"
@@ -20,6 +21,7 @@ func RegisterVideo2xWorker(client zbc.Client) worker.JobWorker {
 		NewJobWorker().
 		JobType("video2x-service").
 		Handler(WorkerHandler(client, video2xHandler)).
+		Timeout(24 * time.Hour).
 		Concurrency(1).
 		Open()
 }

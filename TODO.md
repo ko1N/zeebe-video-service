@@ -4,3 +4,5 @@
 - configuration of python binaries
 - zero-copy file handling
 - set output filename on ffmpeg + handle multiple inputs
+- tracker needs to be thread safe to use it from goroutines (stderr, stdout callbacks)
+- job error isnt visible in log
