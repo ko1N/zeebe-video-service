@@ -7,24 +7,29 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
+	"github.com/ko1N/zeebe-video-service/internal/config"
 	"github.com/ko1N/zeebe-video-service/internal/environment"
 )
 
 // pipeline module for ffmpeg
 
 // ExecuteFFmpeg -
-func ExecuteFFmpegTranscode(ctx *ServiceContext, cmd string) (*environment.ExecutionResult, error) {
+func ExecuteFFmpegTranscode(ctx *ServiceContext, conf *config.FFmpegConfig, cmd string) (*environment.ExecutionResult, error) {
 	ctx.Tracker.Info("probing input files")
-	duration, err := estimateDuration(ctx, cmd)
+	duration, err := estimateDuration(ctx, conf, cmd)
 	if err != nil {
 		ctx.Tracker.Crit("unable to estimate file duration")
 		return nil, err
 	}
 
 	// run ffmpeg and track progress
+	executable := "ffprobe"
+	if conf != nil {
+		executable = conf.FFmpegExecutable
+	}
 	ctx.Tracker.Info("executing ffmpeg", "cmd", cmd)
 	result, err := ctx.Environment.Execute(
-		append([]string{}, "ffmpeg -v warning -progress /dev/stdout "+cmd),
+		append([]string{}, executable+" -v warning -progress /dev/stdout "+cmd),
 		func(outmsg string) {
 			//fmt.Println(outmsg)
 			s := strings.Split(outmsg, "=")
@@ -54,7 +59,7 @@ func ExecuteFFmpegTranscode(ctx *ServiceContext, cmd string) (*environment.Execu
 	return &environment.ExecutionResult{}, nil
 }
 
-func estimateDuration(ctx *ServiceContext, cmd string) (float64, error) {
+func estimateDuration(ctx *ServiceContext, conf *config.FFmpegConfig, cmd string) (float64, error) {
 	// parse argument list and figure out the input file(s)
 	var opts struct {
 		Input string `short:"i" long:"input"`
@@ -68,7 +73,7 @@ func estimateDuration(ctx *ServiceContext, cmd string) (float64, error) {
 	}
 
 	// probe inputs
-	probe, err := ExecuteFFmpegProbe(ctx, opts.Input)
+	probe, err := ExecuteFFmpegProbe(ctx, conf, opts.Input)
 	if err != nil {
 		ctx.Tracker.Crit("unable to probe result", "error", err)
 		return 0, err

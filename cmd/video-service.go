@@ -46,18 +46,18 @@ func main() {
 
 	if containsService(services, "ffmpeg") {
 		fmt.Println("adding ffmpeg services")
-		handlers = append(handlers, workers.RegisterFFmpegProbeWorker(client))
-		handlers = append(handlers, workers.RegisterFFmpegTranscodeWorker(client))
+		handlers = append(handlers, workers.RegisterFFmpegProbeWorker(client, conf.FFmpeg))
+		handlers = append(handlers, workers.RegisterFFmpegTranscodeWorker(client, conf.FFmpeg))
 	}
 
 	if containsService(services, "video2x") {
 		fmt.Println("adding video2x service")
-		handlers = append(handlers, workers.RegisterVideo2xWorker(client))
+		handlers = append(handlers, workers.RegisterVideo2xWorker(client, conf.Video2x))
 	}
 
 	if containsService(services, "rife") {
 		fmt.Println("adding rife service")
-		handlers = append(handlers, workers.RegisterRifeWorker(client))
+		handlers = append(handlers, workers.RegisterRifeWorker(client, conf.Rife))
 	}
 
 	fmt.Println("workers started")

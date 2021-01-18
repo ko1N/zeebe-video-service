@@ -18,12 +18,12 @@ docker run --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true rife-s
 
 Running containers with gpu support:
 ```bash
-docker run --gpus all -v /dev/dri:/dev/dri --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true ffmpeg-service
-docker run --gpus all -v /dev/dri:/dev/dri --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true video2x-service
-docker run --gpus all -v /dev/dri:/dev/dri --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true rife-service
+docker run -it --gpus all -v /dev/dri:/dev/dri --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true ffmpeg-service
+docker run -it --gpus all -v /dev/dri:/dev/dri --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true video2x-service
+docker run -it --gpus all -v /dev/dri:/dev/dri --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true rife-service
 ```
 
-Additionally video2x and rife can be ran with `--gpus all` for gpu support.
+The `--gpus all -v /dev/dri:/dev/dri` flag adds the host gpu to the container (if the driver is installed properly).
 
 ## License
 

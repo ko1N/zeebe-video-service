@@ -62,6 +62,8 @@ func (e *NativeEnvironment) Execute(cmd []string, stdout func(string), stderr fu
 	errsig := make(chan struct{})
 	var errBuf bytes.Buffer
 
+	exc.Stdin = nil
+
 	// start process
 	err = exc.Start()
 	if err != nil {

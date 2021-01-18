@@ -1,3 +1,13 @@
 zeebe:
   host: 127.0.0.1:26500
   plaintext: true
+
+ffmpeg:
+  ffprobe: "ffprobe"
+  ffmpeg: "ffmpeg"
+
+video2x:
+  executable: "python3.8 /video2x/src/video2x.py"
+
+rife:
+  executable: "python3 -m trace --trace /rife/inference_video.py"

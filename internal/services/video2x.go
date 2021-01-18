@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+
+	"github.com/ko1N/zeebe-video-service/internal/config"
 )
 
 func contains(haystack []string, needle string) bool {
@@ -15,7 +17,7 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func ExecuteVideo2x(ctx *ServiceContext, driver string, ratio int, filename string, outputfilename string) error {
+func ExecuteVideo2x(ctx *ServiceContext, conf *config.Video2xConfig, driver string, ratio int, filename string, outputfilename string) error {
 	if !contains([]string{"waifu2x_caffe", "waifu2x_converter_cpp", "waifu2x_ncnn_vulkan", "srmd_ncnn_vulkan", "realsr_ncnn_vulkan", "anime4kcpp"}, driver) {
 		ctx.Tracker.Crit("invalid video2x driver", "driver", driver)
 		return fmt.Errorf("invalid video2x driver %s", driver)
@@ -36,8 +38,12 @@ func ExecuteVideo2x(ctx *ServiceContext, driver string, ratio int, filename stri
 	ctx.Tracker.Info("video2x files", "input", fullfilename, "output", fulloutputfilename)
 
 	// upscale input
+	executable := "python3.8 /video2x/src/video2x.py"
+	if conf != nil {
+		executable = conf.Executable
+	}
 	_, err = ctx.Environment.Execute(
-		append([]string{}, "python3.8 /video2x/src/video2x.py -d "+driver+" -r "+strconv.Itoa(ratio)+" -i \""+fullfilename+"\" -o \""+fulloutputfilename+"\""),
+		append([]string{}, executable+" -d "+driver+" -r "+strconv.Itoa(ratio)+" -i \""+fullfilename+"\" -o \""+fulloutputfilename+"\""),
 		func(outmsg string) {
 			ctx.Tracker.Info(outmsg, "stream", "stdout")
 		}, nil)
