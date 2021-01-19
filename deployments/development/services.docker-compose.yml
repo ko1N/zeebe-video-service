@@ -1,0 +1,60 @@
+version: "3.5"
+
+services:
+
+  ffmpeg-service:
+    image: ffmpeg-service
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities:
+              - gpu
+    environment:
+      - ZEEBE_HOST="172.17.0.1:26500"
+      - ZEEBE_PLAINTEXT=true
+    volumes:
+      - /dev/dri:/dev/dri
+      - temp_data:/app/temp
+    networks:
+      - services
+
+  video2x-service:
+    image: video2x-service
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities:
+              - gpu
+    environment:
+      - ZEEBE_HOST="172.17.0.1:26500"
+      - ZEEBE_PLAINTEXT=true
+    volumes:
+      - /dev/dri:/dev/dri
+      - temp_data:/app/temp
+    networks:
+      - services
+
+  rife-service:
+    image: rife-service
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities:
+              - gpu
+    environment:
+      - ZEEBE_HOST="172.17.0.1:26500"
+      - ZEEBE_PLAINTEXT=true
+    volumes:
+      - /dev/dri:/dev/dri
+      - temp_data:/app/temp
+    networks:
+      - services
+
+volumes:
+  temp_data:
+
+networks:
+  services:

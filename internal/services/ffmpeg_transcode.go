@@ -23,13 +23,18 @@ func ExecuteFFmpegTranscode(ctx *ServiceContext, conf *config.FFmpegConfig, cmd 
 	}
 
 	// run ffmpeg and track progress
-	executable := "ffprobe"
+	// due to the nature of sending a custom command line
+	// to the sub-process we want to run it in a seperate subshell
+	// so commands are being executed properly
+	ctx.Tracker.Info("executing ffmpeg", "cmd", cmd)
+	executable := "ffmpeg"
 	if conf != nil {
 		executable = conf.FFmpegExecutable
 	}
-	ctx.Tracker.Info("executing ffmpeg", "cmd", cmd)
+	cmdline := strings.Split("/bin/sh -c", " ")
+
 	result, err := ctx.Environment.Execute(
-		append([]string{}, executable+" -v warning -progress /dev/stdout "+cmd),
+		cmdline[0], append(cmdline[1:], []string{executable + " -v warning -progress /dev/stdout " + cmd}...),
 		func(outmsg string) {
 			//fmt.Println(outmsg)
 			s := strings.Split(outmsg, "=")

@@ -3,6 +3,7 @@ package services
 import (
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/ko1N/zeebe-video-service/internal/config"
 )
@@ -22,23 +23,23 @@ func ExecuteRife(ctx *ServiceContext, conf *config.RifeConfig, ratio int, uhd bo
 
 	ctx.Tracker.Info("rife files", "input", fullfilename, "output", fulloutputfilename)
 
-	skipcmd := ""
-	if skip {
-		skipcmd = "--skip"
-	}
-
-	uhdcmd := ""
-	if uhd {
-		uhdcmd = "--UHD"
-	}
-
 	// upsample input
 	executable := "python3 /rife/inference_video.py"
 	if conf != nil {
 		executable = conf.Executable
 	}
+	cmdline := strings.Split(executable, " ")
+
+	args := []string{"--exp", strconv.Itoa(ratio), "--video", fullfilename, "--output", fulloutputfilename}
+	if skip {
+		args = append(args, "--skip")
+	}
+	if uhd {
+		args = append(args, "--UHD")
+	}
+
 	_, err = ctx.Environment.Execute(
-		append([]string{}, executable+" --exp="+strconv.Itoa(ratio)+" "+uhdcmd+" "+skipcmd+" --video=\""+fullfilename+"\" --output=\""+fulloutputfilename+"\""),
+		cmdline[0], append(cmdline[1:], args...),
 		func(outmsg string) {
 			ctx.Tracker.Info(outmsg, "stream", "stdout")
 		},

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/ko1N/zeebe-video-service/internal/config"
 )
@@ -42,11 +43,16 @@ func ExecuteVideo2x(ctx *ServiceContext, conf *config.Video2xConfig, driver stri
 	if conf != nil {
 		executable = conf.Executable
 	}
+	cmdline := strings.Split(executable, " ")
+
 	_, err = ctx.Environment.Execute(
-		append([]string{}, executable+" -d "+driver+" -r "+strconv.Itoa(ratio)+" -i \""+fullfilename+"\" -o \""+fulloutputfilename+"\""),
+		cmdline[0], append(cmdline[1:], []string{"-d", driver, "-r", strconv.Itoa(ratio), "-i", fullfilename, "-o", fulloutputfilename}...),
 		func(outmsg string) {
 			ctx.Tracker.Info(outmsg, "stream", "stdout")
-		}, nil)
+		},
+		func(errmsg string) {
+			ctx.Tracker.Info(errmsg, "stream", "stderr")
+		})
 	if err != nil {
 		ctx.Tracker.Crit("unable to execute video2x", "error", err)
 		return err

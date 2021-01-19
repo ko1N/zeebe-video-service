@@ -39,28 +39,22 @@ func (e *NativeEnvironment) Name() string {
 }
 
 // Execute -
-func (e *NativeEnvironment) Execute(cmd []string, stdout func(string), stderr func(string)) (*ExecutionResult, error) {
-	//fmt.Printf("exec: `/bin/sh -c \"%s\"`\n", strings.Join(cmd, " "))
+func (e *NativeEnvironment) Execute(cmd string, args []string, stdout func(string), stderr func(string)) (*ExecutionResult, error) {
+	//fmt.Printf("exec: `%s %s`\n", cmd, strings.Join(args, " "))
 
-	exc := exec.Command("/bin/sh", []string{"-c", strings.Join(cmd, " ")}...)
+	exc := exec.Command(cmd, args...)
 	exc.Dir = e.PWD
 
 	// create stdout/stderr pipes
-	outpr, err := exc.StdoutPipe()
+	stdoutpipe, err := exc.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	defer outpr.Close()
-	outsig := make(chan struct{})
-	var outBuf bytes.Buffer
 
-	errpr, err := exc.StderrPipe()
+	stderrpipe, err := exc.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
-	defer errpr.Close()
-	errsig := make(chan struct{})
-	var errBuf bytes.Buffer
 
 	exc.Stdin = nil
 
@@ -70,39 +64,48 @@ func (e *NativeEnvironment) Execute(cmd []string, stdout func(string), stderr fu
 		return nil, err
 	}
 
-	// track stdout
+	// track stderr
+	stderrsig := make(chan struct{})
+	var errBuf bytes.Buffer
 	go func() {
-		reader := bufio.NewScanner(outpr)
-		for reader.Scan() {
-			if stdout != nil {
-				stdout(reader.Text())
+		reader := bufio.NewReader(stderrpipe)
+		for {
+			text, err := reader.ReadString('\n')
+			if err != nil {
+				break
 			}
-			outBuf.Write([]byte(reader.Text()))
-			outBuf.Write([]byte("\n"))
+			if stderr != nil {
+				stderr(strings.TrimSuffix(text, "\n"))
+			}
+			errBuf.Write([]byte(text))
 		}
-		outsig <- struct{}{}
+		stderrsig <- struct{}{}
 	}()
 
-	// track stderr
+	// track stdout
+	stdoutsig := make(chan struct{})
+	var outBuf bytes.Buffer
 	go func() {
-		reader := bufio.NewScanner(errpr)
-		for reader.Scan() {
-			if stderr != nil {
-				stderr(reader.Text())
+		reader := bufio.NewReader(stdoutpipe)
+		for {
+			text, err := reader.ReadString('\n')
+			if err != nil {
+				break
 			}
-			errBuf.Write([]byte(reader.Text()))
-			errBuf.Write([]byte("\n"))
+			if stdout != nil {
+				stdout(strings.TrimSuffix(text, "\n"))
+			}
+			outBuf.Write([]byte(text))
 		}
-		errsig <- struct{}{}
+		stdoutsig <- struct{}{}
 	}()
+
+	// wait for both pipes to be closed before calling wait
+	<-stderrsig
+	<-stdoutsig
 
 	// wait for exc to finish
 	err = exc.Wait()
-
-	// synchropnize with stdout/stderr
-	<-outsig
-	<-errsig
-
 	if err != nil {
 		return nil, err
 	}

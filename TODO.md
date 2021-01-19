@@ -1,9 +1,6 @@
-- file uploading on rife, ffmpeg
-- file download/upload
+- logs are malformed in zeebe (argument list)
+- ffmpeg service does not track output file / does not handle multiple input files
+- file upload/download and moving between file backends does not work
 - watchfolder service
-- configuration of python binaries
-- zero-copy file handling
-- set output filename on ffmpeg + handle multiple inputs
-- tracker needs to be thread safe to use it from goroutines (stderr, stdout callbacks)
-- job error isnt visible in log
-- RIFE --fps argument instead of exp
+- zero-copy file handling (when running on fs/shares/mounts)
+- rife --fps argument missing

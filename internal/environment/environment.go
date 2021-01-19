@@ -20,7 +20,7 @@ type EnvironmentWriter interface {
 // Environment -
 type Environment interface {
 	Name() string
-	Execute(cmd []string, stdout func(string), stderr func(string)) (*ExecutionResult, error)
+	Execute(cmd string, args []string, stdout func(string), stderr func(string)) (*ExecutionResult, error)
 
 	FullPath(relpath string) string
 

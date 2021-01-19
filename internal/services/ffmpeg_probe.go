@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/ko1N/zeebe-video-service/internal/config"
 )
@@ -14,8 +15,10 @@ func ExecuteFFmpegProbe(ctx *ServiceContext, conf *config.FFmpegConfig, filename
 	if conf != nil {
 		executable = conf.FFprobeExecutable
 	}
+	cmdline := strings.Split(executable, " ")
+
 	probeResult, err := ctx.Environment.Execute(
-		append([]string{}, executable+" -v quiet -print_format json -show_format -show_streams -i "+filename), nil, nil)
+		cmdline[0], append(cmdline[1:], []string{"-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", "-i", filename}...), nil, nil)
 	if err != nil {
 		ctx.Tracker.Crit("unable to execute ffprobe", "error", err)
 		return nil, err
