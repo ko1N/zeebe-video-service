@@ -16,11 +16,13 @@ type File struct {
 
 // Storage -
 type Storage interface {
-	List(bucket string) ([]File, error)
-	CreateBucket(bucket string) error
-	DeleteBucket(bucket string) error
-	GetFile(bucket string, objname string, outname string) error
-	PutFile(bucket string, inpath string, outfile string) error
+	List(folder string) ([]File, error)
+	CreateFolder(folder string) error
+	DeleteFolder(folder string) error
+	DownloadFile(remotefile string, localfile string) error
+	UploadFile(localfile string, remotefile string) error
+	DeleteFile(remotefile string) error
+	Close()
 }
 
 func ConnectStorage(env environment.Environment, url *url.URL) (Storage, error) {
@@ -37,6 +39,15 @@ func ConnectStorage(env environment.Environment, url *url.URL) (Storage, error) 
 			conf.AccessKeySecret = passwd
 		}
 		return ConnectMinIO(env, &conf)
+	case "smb":
+		conf := SmbConfig{
+			Server: url.Host,
+			User:   url.User.Username(),
+		}
+		if passwd, ok := url.User.Password(); ok {
+			conf.Password = passwd
+		}
+		return ConnectSmb(env, &conf)
 	default:
 		return nil, fmt.Errorf("invalid scheme")
 	}

@@ -3,9 +3,7 @@ package workers
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
@@ -44,18 +42,18 @@ func ffmpegProbeHandler(conf *config.FFmpegConfig) func(ctx *WorkerContext) erro
 			return fmt.Errorf("failed to connect to storage: %s", err.Error())
 		}
 
-		dir, file := filepath.Split(url.Path)
-		bucket := strings.TrimLeft(path.Clean(dir), "/")
+		store.DeleteFolder("data/test/test234")
 
 		// download file
-		ctx.Tracker.Info("downloading from bucket", "bucket", bucket, "file", file)
-		err = store.GetFile(bucket, file, file)
+		_, filename := filepath.Split(url.Path)
+		ctx.Tracker.Info("downloading from bucket", "file", url.Path)
+		err = store.DownloadFile(url.Path, filename)
 		if err != nil {
 			return fmt.Errorf("failed to download file from storage: %s", err.Error())
 		}
 
 		// ffprobe
-		probe, err := services.ExecuteFFmpegProbe(ctx.ServiceContext, conf, file)
+		probe, err := services.ExecuteFFmpegProbe(ctx.ServiceContext, conf, filename)
 		if err != nil {
 			return fmt.Errorf("ffprobe failed: %s", err.Error())
 		}

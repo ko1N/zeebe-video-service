@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/ko1N/zeebe-video-service/internal/environment"
 	"github.com/minio/minio-go/v7"
@@ -44,13 +47,28 @@ func ConnectMinIO(env environment.Environment, conf *MinIOConfig) (*MinIOStorage
 	}, nil
 }
 
+func parseFilename(filename string) (string, string) {
+	cleanFilename := strings.TrimLeft(path.Clean(filename), string(os.PathSeparator))
+	split := strings.Split(cleanFilename, string(os.PathSeparator))
+	if len(split) == 1 {
+		return split[0], ""
+	} else {
+		return split[0], strings.Join(split[1:], string(os.PathSeparator))
+	}
+}
+
 // List - lists files in a remote location
-func (self *MinIOStorage) List(bucket string) ([]File, error) {
+func (self *MinIOStorage) List(folder string) ([]File, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	bucket, prefix := parseFilename(folder)
+	if prefix != "" {
+		prefix += string(os.PathSeparator)
+	}
+
 	objectCh := self.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
-		Prefix:    "",
+		Prefix:    prefix,
 		Recursive: true,
 	})
 
@@ -70,13 +88,15 @@ func (self *MinIOStorage) List(bucket string) ([]File, error) {
 }
 
 // CreateBucket - creates a new storage bucket
-func (self *MinIOStorage) CreateBucket(bucket string) error {
+func (self *MinIOStorage) CreateFolder(folder string) error {
+	bucket, _ := parseFilename(folder)
+
 	found, err := self.client.BucketExists(context.Background(), bucket)
 	if err != nil {
 		return err
 	}
 	if found {
-		err = self.DeleteBucket(bucket)
+		err = self.DeleteFolder(bucket)
 		if err != nil {
 			return err
 		}
@@ -91,7 +111,9 @@ func (self *MinIOStorage) CreateBucket(bucket string) error {
 }
 
 // DeleteBucket - deletes the given storage bucket
-func (self *MinIOStorage) DeleteBucket(bucket string) error {
+func (self *MinIOStorage) DeleteFolder(folder string) error {
+	bucket, _ := parseFilename(folder)
+
 	objectsCh := make(chan minio.ObjectInfo)
 
 	// send objects to the remove channel
@@ -124,14 +146,16 @@ func (self *MinIOStorage) DeleteBucket(bucket string) error {
 	return self.client.RemoveBucket(context.Background(), bucket)
 }
 
-// GetFile - copies a file from the minio storage to the environment writer
-func (self *MinIOStorage) GetFile(bucket string, objname string, outpath string) error {
-	object, err := self.client.GetObject(context.Background(), bucket, objname, minio.GetObjectOptions{})
+// DownloadFile - copies a file from the minio storage to the environment writer
+func (self *MinIOStorage) DownloadFile(remotefile string, localfile string) error {
+	bucket, remotefilename := parseFilename(remotefile)
+
+	object, err := self.client.GetObject(context.Background(), bucket, remotefilename, minio.GetObjectOptions{})
 	if err != nil {
 		return err
 	}
 
-	writer, err := self.environment.FileWriter(outpath)
+	writer, err := self.environment.FileWriter(localfile)
 	if err != nil {
 		return err
 	}
@@ -141,16 +165,29 @@ func (self *MinIOStorage) GetFile(bucket string, objname string, outpath string)
 	return err
 }
 
-// PutFile - copies a file to the minio storage
-func (self *MinIOStorage) PutFile(bucket string, inpath string, objname string) error {
-	reader, err := self.environment.FileReader(inpath)
+// UploadFile - copies a file to the minio storage
+func (self *MinIOStorage) UploadFile(localfile string, remotefile string) error {
+	bucket, remotefilename := parseFilename(remotefile)
+
+	reader, err := self.environment.FileReader(localfile)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 
-	_, err = self.client.PutObject(context.Background(), bucket, objname, reader, -1, minio.PutObjectOptions{
+	_, err = self.client.PutObject(context.Background(), bucket, remotefilename, reader, -1, minio.PutObjectOptions{
 		//ContentType: "application/octet-stream",
 	})
 	return err
+}
+
+// DeleteFile - deletes a file on the minio storage
+func (self *MinIOStorage) DeleteFile(remotefile string) error {
+	bucket, remotefilename := parseFilename(remotefile)
+	return self.client.RemoveObject(context.Background(), bucket, remotefilename, minio.RemoveObjectOptions{})
+}
+
+// Close - closes the minio connection
+func (self *MinIOStorage) Close() {
+	// no-op
 }

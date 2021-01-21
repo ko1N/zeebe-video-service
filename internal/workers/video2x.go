@@ -45,19 +45,13 @@ func video2xHandler(conf *config.Video2xConfig) func(ctx *WorkerContext) error {
 			return fmt.Errorf("failed to connect to storage: %s", err.Error())
 		}
 
-		dir, file := filepath.Split(url.Path)
-		bucket := strings.TrimLeft(path.Clean(dir), "/")
-
 		// download file
-		ctx.Tracker.Info("downloading from bucket", "bucket", bucket, "file", file)
-		err = store.GetFile(bucket, file, file)
+		dirname, filename := filepath.Split(url.Path)
+		ctx.Tracker.Info("downloading from bucket", "file", url.Path)
+		err = store.DownloadFile(url.Path, filename)
 		if err != nil {
 			return fmt.Errorf("failed to download file from storage: %s", err.Error())
 		}
-
-		// Options:
-		// driver: ...
-		// ratio: 2,3,4,...
 
 		// parse arguments
 		driver := ctx.Headers["driver"]
@@ -75,20 +69,20 @@ func video2xHandler(conf *config.Video2xConfig) func(ctx *WorkerContext) error {
 		ctx.Tracker.Info("video2x settings", "driver", driver, "ratio", ratio)
 
 		// run video2x
-		outfile := fmt.Sprintf("%s_upscaled%s", strings.TrimSuffix(file, filepath.Ext(file)), filepath.Ext(file))
-		err = services.ExecuteVideo2x(ctx.ServiceContext, conf, driver, ratio, file, outfile)
+		outfilename := fmt.Sprintf("%s_upscaled%s", strings.TrimSuffix(filename, filepath.Ext(filename)), filepath.Ext(filename))
+		err = services.ExecuteVideo2x(ctx.ServiceContext, conf, driver, ratio, filename, outfilename)
 		if err != nil {
 			return fmt.Errorf("video2x failed: %s", err.Error())
 		}
 
 		// upload file
-		ctx.Tracker.Info("uploading to bucket", "bucket", bucket, "file", outfile)
-		err = store.PutFile(bucket, outfile, outfile)
+		ctx.Tracker.Info("uploading to bucket", "file", outfilename)
+		err = store.UploadFile(outfilename, path.Join(dirname, outfilename))
 		if err != nil {
 			return fmt.Errorf("failed to upload file to storage: %s", err.Error())
 		}
 
-		url.Path = path.Join(dir, outfile)
+		url.Path = path.Join(dirname, outfilename)
 		ctx.Variables["output"] = url.String()
 		ctx.Tracker.Info("video2x successful", "output", ctx.Variables["output"])
 		return nil

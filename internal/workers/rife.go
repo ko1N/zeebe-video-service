@@ -45,19 +45,13 @@ func rifeHandler(conf *config.RifeConfig) func(ctx *WorkerContext) error {
 			return fmt.Errorf("failed to connect to storage: %s", err.Error())
 		}
 
-		dir, file := filepath.Split(url.Path)
-		bucket := strings.TrimLeft(path.Clean(dir), "/")
-
 		// download file
-		ctx.Tracker.Info("downloading from bucket", "bucket", bucket, "file", file)
-		err = store.GetFile(bucket, file, file)
+		dirname, filename := filepath.Split(url.Path)
+		ctx.Tracker.Info("downloading from bucket", "file", url.Path)
+		err = store.DownloadFile(url.Path, filename)
 		if err != nil {
 			return fmt.Errorf("failed to download file from storage: %s", err.Error())
 		}
-
-		// Options:
-		// exp (ratio): 1,2,3,...
-		// skip: true/false (skip static frames)
 
 		// parse arguments
 		ratio, err := strconv.Atoi(ctx.Headers["ratio"])
@@ -77,21 +71,21 @@ func rifeHandler(conf *config.RifeConfig) func(ctx *WorkerContext) error {
 		}
 		ctx.Tracker.Info("rife settings", "ratio", ratio, "uhd", uhd, "skip", skip)
 
-		// rife - hardcoded output file name (see build/rife-service.dockerfile) for the corresponding hack!
-		outfile := fmt.Sprintf("%s_upsampled%s", strings.TrimSuffix(file, filepath.Ext(file)), filepath.Ext(file))
-		err = services.ExecuteRife(ctx.ServiceContext, conf, ratio-1, uhd, skip, file, outfile)
+		// rife
+		outfilename := fmt.Sprintf("%s_upsampled%s", strings.TrimSuffix(filename, filepath.Ext(filename)), filepath.Ext(filename))
+		err = services.ExecuteRife(ctx.ServiceContext, conf, ratio-1, uhd, skip, filename, outfilename)
 		if err != nil {
 			return fmt.Errorf("rife failed: %s", err.Error())
 		}
 
 		// upload file
-		ctx.Tracker.Info("uploading to bucket", "bucket", bucket, "file", outfile)
-		err = store.PutFile(bucket, outfile, outfile)
+		ctx.Tracker.Info("uploading to bucket", "file", outfilename)
+		err = store.UploadFile(outfilename, path.Join(dirname, outfilename))
 		if err != nil {
 			return fmt.Errorf("failed to upload file to storage: %s", err.Error())
 		}
 
-		url.Path = path.Join(dir, outfile)
+		url.Path = path.Join(dirname, outfilename)
 		ctx.Variables["output"] = url.String()
 		ctx.Tracker.Info("rife successful", "output", ctx.Variables["output"])
 		return nil
