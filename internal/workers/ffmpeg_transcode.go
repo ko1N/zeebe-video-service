@@ -47,10 +47,11 @@ func ffmpegTranscodeHandler(conf *config.FFmpegConfig) func(ctx *WorkerContext) 
 		if err != nil {
 			return fmt.Errorf("failed to connect to storage: %s", err.Error())
 		}
+		defer store.Close()
 
 		// download file
 		_, filename := filepath.Split(url.Path)
-		ctx.Tracker.Info("downloading from bucket", "file", url.Path)
+		ctx.Tracker.Info("downloading from storage", "src", url.Path, "dest", filename)
 		err = store.DownloadFile(url.Path, filename)
 		if err != nil {
 			return fmt.Errorf("failed to download file from storage: %s", err.Error())

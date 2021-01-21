@@ -44,10 +44,11 @@ func video2xHandler(conf *config.Video2xConfig) func(ctx *WorkerContext) error {
 		if err != nil {
 			return fmt.Errorf("failed to connect to storage: %s", err.Error())
 		}
+		defer store.Close()
 
 		// download file
 		dirname, filename := filepath.Split(url.Path)
-		ctx.Tracker.Info("downloading from bucket", "file", url.Path)
+		ctx.Tracker.Info("downloading from storage", "src", url.Path, "dest", filename)
 		err = store.DownloadFile(url.Path, filename)
 		if err != nil {
 			return fmt.Errorf("failed to download file from storage: %s", err.Error())
@@ -76,7 +77,7 @@ func video2xHandler(conf *config.Video2xConfig) func(ctx *WorkerContext) error {
 		}
 
 		// upload file
-		ctx.Tracker.Info("uploading to bucket", "file", outfilename)
+		ctx.Tracker.Info("uploading to storage", "src", outfilename, "dest", path.Join(dirname, outfilename))
 		err = store.UploadFile(outfilename, path.Join(dirname, outfilename))
 		if err != nil {
 			return fmt.Errorf("failed to upload file to storage: %s", err.Error())

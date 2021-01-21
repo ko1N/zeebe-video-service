@@ -44,6 +44,11 @@ func main() {
 
 	handlers := []worker.JobWorker{}
 
+	if containsService(services, "files") {
+		fmt.Println("adding file services")
+		handlers = append(handlers, workers.RegisterCopyFileWorker(client))
+	}
+
 	if containsService(services, "ffmpeg") {
 		fmt.Println("adding ffmpeg services")
 		handlers = append(handlers, workers.RegisterFFmpegProbeWorker(client, conf.FFmpeg))

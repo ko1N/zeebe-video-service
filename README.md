@@ -74,6 +74,7 @@ docker-compose up
 
 Building the containers locally
 ```bash
+docker build -t files-service -f build/files-service.dockerfile .
 docker build -t ffmpeg-service -f build/ffmpeg-service.dockerfile .
 docker build -t video2x-service -f build/video2x-service.dockerfile .
 docker build -t rife-service -f build/rife-service.dockerfile .
@@ -81,6 +82,7 @@ docker build -t rife-service -f build/rife-service.dockerfile .
 
 Running the containers locally
 ```bash
+docker run --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true files-service
 docker run --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true ffmpeg-service
 docker run --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true video2x-service
 docker run --env ZEEBE_HOST="172.17.0.1:26500" --env ZEEBE_PLAINTEXT=true rife-service

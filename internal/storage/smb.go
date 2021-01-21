@@ -182,7 +182,9 @@ func (self *SmbStorage) UploadFile(localfile string, remotefile string) error {
 	}
 	defer file.Close()
 
-	return nil
+	// copy file
+	_, err = io.Copy(file, reader)
+	return err
 }
 
 // DeleteFile - deletes a file on the smb storage
