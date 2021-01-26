@@ -4,3 +4,4 @@
 - watchfolder service
 - zero-copy file handling (when running on fs/shares/mounts)
 - rife --fps argument missing
+- file-copy-service should not save a file locally

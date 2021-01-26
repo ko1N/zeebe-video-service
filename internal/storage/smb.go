@@ -1,5 +1,6 @@
 package storage
 
+/*
 import (
 	"fmt"
 	"io"
@@ -220,3 +221,4 @@ func (self *SmbStorage) Close() {
 	self.session.Logoff()
 	self.conn.Close()
 }
+*/

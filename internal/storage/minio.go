@@ -146,6 +146,46 @@ func (self *MinIOStorage) DeleteFolder(folder string) error {
 	return self.client.RemoveBucket(context.Background(), bucket)
 }
 
+// TODO: clean up
+type MinIOFileReader struct {
+	object *minio.Object
+}
+
+func (self *MinIOFileReader) Read(p []byte) (n int, err error) {
+	return self.object.Read(p)
+}
+
+func (self *MinIOFileReader) Seek(offset int64, whence int) (int64, error) {
+	return self.object.Seek(offset, whence)
+}
+
+func (self *MinIOFileReader) Size() (int64, error) {
+	info, err := self.object.Stat()
+	if err != nil {
+		return 0, err
+	}
+	return info.Size, nil
+}
+
+func (self *MinIOFileReader) Close() error {
+	return self.object.Close()
+}
+
+// TODO: clean above up
+
+func (self *MinIOStorage) GetFileReader(filename string) (VirtualFileReader, error) {
+	bucket, remotefilename := parseFilename(filename)
+
+	object, err := self.client.GetObject(context.Background(), bucket, remotefilename, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinIOFileReader{
+		object: object,
+	}, nil
+}
+
 // DownloadFile - copies a file from the minio storage to the environment writer
 func (self *MinIOStorage) DownloadFile(remotefile string, localfile string) error {
 	bucket, remotefilename := parseFilename(remotefile)
@@ -154,6 +194,7 @@ func (self *MinIOStorage) DownloadFile(remotefile string, localfile string) erro
 	if err != nil {
 		return err
 	}
+	defer object.Close()
 
 	writer, err := self.environment.FileWriter(localfile)
 	if err != nil {

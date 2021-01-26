@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/go-ini/ini v1.62.0 // indirect
 	github.com/google/uuid v1.1.2
+	github.com/hanwen/go-fuse/v2 v2.0.3
 	github.com/hirochachacha/go-smb2 v1.0.3
 	github.com/inconshreveable/log15 v0.0.0-20201112154412-8562bdadbbac
 	github.com/jessevdk/go-flags v1.4.0
