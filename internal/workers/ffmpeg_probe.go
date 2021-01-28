@@ -26,16 +26,18 @@ func RegisterFFmpegProbeWorker(client zbc.Client, conf *config.FFmpegConfig) wor
 
 func ffmpegProbeHandler(conf *config.FFmpegConfig) func(ctx *WorkerContext) error {
 	return func(ctx *WorkerContext) error {
-
-		// ............
-		// just a test
-		storage.RunFuse()
-		// ............
-
 		source := ctx.Variables["source"]
 		if source == "" {
 			return fmt.Errorf("`source` variable must not be empty")
 		}
+
+		// ............
+		// just a test
+		filesystem, _ := storage.MountVirtualFS([]string{})
+		//defer filesystem.Close()
+		// ............
+
+		filesystem.AddInput(source.(string))
 
 		url, err := url.Parse(source.(string))
 		if err != nil {
