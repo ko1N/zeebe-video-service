@@ -2,8 +2,6 @@ package workers
 
 import (
 	"fmt"
-	"net/url"
-	"path/filepath"
 	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
@@ -31,36 +29,25 @@ func ffmpegProbeHandler(conf *config.FFmpegConfig) func(ctx *WorkerContext) erro
 			return fmt.Errorf("`source` variable must not be empty")
 		}
 
-		// ............
-		// just a test
-		filesystem, _ := storage.MountVirtualFS([]string{})
-		//defer filesystem.Close()
-		// ............
-
-		filesystem.AddInput(source.(string))
-
-		url, err := url.Parse(source.(string))
+		url, err := storage.ParseFileUrl(source.(string))
 		if err != nil {
 			return fmt.Errorf("unable to parse url in `source` variable: %s", err.Error())
 		}
 
-		ctx.Tracker.Info("connecting to storage at", "source", source)
-		store, err := storage.ConnectStorage(ctx.Environment, url)
+		err = ctx.FileSystem.AddInput(url)
 		if err != nil {
-			return fmt.Errorf("failed to connect to storage: %s", err.Error())
+			return fmt.Errorf("unable to add input file '%s': %s", url.URL.String(), err.Error())
 		}
-		defer store.Close()
 
-		// download file
-		_, filename := filepath.Split(url.Path)
-		ctx.Tracker.Info("downloading from storage", "src", url.Path, "dest", filename)
-		err = store.DownloadFile(url.Path, filename)
-		if err != nil {
-			return fmt.Errorf("failed to download file from storage: %s", err.Error())
-		}
+		//filesystem, _ := storage.CreateVirtualFS()
+		//filesystem, _ := filesystem.CreateDiskFS()
+		//filesystem.AddInput(source.(string))
+		//filesystem.AddOutput("minio://minio:miniominio@172.17.0.1:9000/test/test2file.txt")
+		//defer filesystem.Close()
+		// ............
 
 		// ffprobe
-		probe, err := services.ExecuteFFmpegProbe(ctx.ServiceContext, conf, filename)
+		probe, err := services.ExecuteFFmpegProbe(ctx.ServiceContext, conf, url.FilePath)
 		if err != nil {
 			return fmt.Errorf("ffprobe failed: %s", err.Error())
 		}

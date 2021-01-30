@@ -18,7 +18,15 @@ func ExecuteFFmpegProbe(ctx *ServiceContext, conf *config.FFmpegConfig, filename
 	cmdline := strings.Split(executable, " ")
 
 	probeResult, err := ctx.Environment.Execute(
-		cmdline[0], append(cmdline[1:], []string{"-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", "-i", filename}...), nil, nil)
+		cmdline[0], append(cmdline[1:], []string{"-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", "-i", filename}...),
+		func(outmsg string) {
+			// TODO: detect true ffmpeg errors
+			//ctx.Tracker.Info(outmsg, "stream", "stdout")
+		},
+		func(errmsg string) {
+			// TODO: detect true ffmpeg errors
+			//ctx.Tracker.Info(errmsg, "stream", "stderr")
+		})
 	if err != nil {
 		ctx.Tracker.Crit("unable to execute ffprobe", "error", err)
 		return nil, err

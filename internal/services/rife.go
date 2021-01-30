@@ -9,13 +9,13 @@ import (
 )
 
 func ExecuteRife(ctx *ServiceContext, conf *config.RifeConfig, ratio int, uhd bool, skip bool, filename string, outputfilename string) error {
-	fullfilename, err := filepath.Abs(ctx.Environment.FullPath(filename))
+	fullfilename, err := filepath.Abs(filename)
 	if err != nil {
 		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
 		return err
 	}
 
-	fulloutputfilename, err := filepath.Abs(ctx.Environment.FullPath(outputfilename))
+	fulloutputfilename, err := filepath.Abs(outputfilename)
 	if err != nil {
 		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
 		return err

@@ -1,9 +1,8 @@
 package workers
 
 import (
+	"io"
 	"fmt"
-	"net/url"
-	"path/filepath"
 	"time"
 
 	"github.com/ko1N/zeebe-video-service/internal/storage"
@@ -28,60 +27,55 @@ func copyFileHandler() func(ctx *WorkerContext) error {
 			return fmt.Errorf("`source` variable must not be empty")
 		}
 
-		dest := ctx.Variables["dest"]
-		if dest == "" {
-			return fmt.Errorf("`dest` variable must not be empty")
+		target := ctx.Variables["target"]
+		if target == "" {
+			return fmt.Errorf("`target` variable must not be empty")
 		}
 
-		// download source file
-		filename := ""
-		{
-			url, err := url.Parse(source.(string))
-			if err != nil {
-				return fmt.Errorf("unable to parse url in `source` variable: %s", err.Error())
-			}
-
-			ctx.Tracker.Info("connecting to storage at", "source", source)
-			store, err := storage.ConnectStorage(ctx.Environment, url)
-			if err != nil {
-				return fmt.Errorf("failed to connect to storage: %s", err.Error())
-			}
-			defer store.Close()
-
-			// download file
-			_, filename = filepath.Split(url.Path)
-			ctx.Tracker.Info("downloading from storage", "src", url.Path, "dest", filename)
-			err = store.DownloadFile(url.Path, filename)
-			if err != nil {
-				return fmt.Errorf("failed to download file from storage: %s", err.Error())
-			}
+		sourceUrl, err := storage.ParseFileUrl(source.(string))
+		if err != nil {
+			return fmt.Errorf("unable to parse url in `source` variable: %s", err.Error())
 		}
 
-		// upload file
-		{
-			url, err := url.Parse(dest.(string))
-			if err != nil {
-				return fmt.Errorf("unable to parse url in `dest` variable: %s", err.Error())
-			}
-
-			ctx.Tracker.Info("connecting to storage at", "source", source)
-			store, err := storage.ConnectStorage(ctx.Environment, url)
-			if err != nil {
-				return fmt.Errorf("failed to connect to storage: %s", err.Error())
-			}
-			defer store.Close()
-
-			// download file
-			ctx.Tracker.Info("uploading to storage", "src", filename, "dest", url.Path)
-			err = store.UploadFile(filename, url.Path)
-			if err != nil {
-				return fmt.Errorf("failed to download file from storage: %s", err.Error())
-			}
+		targetUrl, err := storage.ParseFileUrl(target.(string))
+		if err != nil {
+			return fmt.Errorf("unable to parse url in `target` variable: %s", err.Error())
 		}
 
-		//url.Path = path.Join(dirname, outfilename)
-		//ctx.Variables["output"] = url.String()
-		ctx.Tracker.Info("file copy successful", "dest", dest)
+		// source store
+		ctx.Tracker.Info("connecting to source storage at", "source", source)
+		sourceStore, err := storage.ConnectStorage(sourceUrl)
+		if err != nil {
+			return fmt.Errorf("failed to connect to source storage: %s", err.Error())
+		}
+		defer sourceStore.Close()
+
+		// target store
+		ctx.Tracker.Info("connecting to target storage at", "target", target)
+		targetStore, err := storage.ConnectStorage(targetUrl)
+		if err != nil {
+			return fmt.Errorf("failed to connect to target storage: %s", err.Error())
+		}
+		defer targetStore.Close()
+
+		reader, err := sourceStore.GetFileReader(sourceUrl)
+		if err != nil {
+			return fmt.Errorf("failed to get reader for source storage: %s", err.Error())
+		}
+		defer reader.Close()
+
+		writer, err := targetStore.GetFileWriter(targetUrl)
+		if err != nil {
+			return fmt.Errorf("failed to get writer for target storage: %s", err.Error())
+		}
+		defer writer.Close()
+
+		_, err = io.Copy(writer, reader)
+		if err != nil {
+			return fmt.Errorf("failed to copy between storages: %s", err.Error())
+		}
+
+		ctx.Tracker.Info("file copy successful")
 		return nil
 	}
 }

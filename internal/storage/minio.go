@@ -9,16 +9,14 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ko1N/zeebe-video-service/internal/environment"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // MinIOStorage - describes a minio storage
 type MinIOStorage struct {
-	environment environment.Environment
-	client      *minio.Client
-	location    string
+	client   *minio.Client
+	location string
 }
 
 // MinIOConfig - config entry describing a storage config
@@ -31,7 +29,7 @@ type MinIOConfig struct {
 }
 
 // ConnectMinIO - opens a connection to minio and returns the connection object
-func ConnectMinIO(env environment.Environment, conf *MinIOConfig) (*MinIOStorage, error) {
+func ConnectMinIO(conf *MinIOConfig) (*MinIOStorage, error) {
 	client, err := minio.New(conf.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(conf.AccessKey, conf.AccessKeySecret, ""),
 		Secure: conf.UseSSL,
@@ -41,12 +39,12 @@ func ConnectMinIO(env environment.Environment, conf *MinIOConfig) (*MinIOStorage
 		return nil, err
 	}
 	return &MinIOStorage{
-		environment: env,
-		client:      client,
-		location:    conf.Location,
+		client:   client,
+		location: conf.Location,
 	}, nil
 }
 
+// TODO: deleteme :)
 func parseFilename(filename string) (string, string) {
 	cleanFilename := strings.TrimLeft(path.Clean(filename), string(os.PathSeparator))
 	split := strings.Split(cleanFilename, string(os.PathSeparator))
@@ -146,7 +144,12 @@ func (self *MinIOStorage) DeleteFolder(folder string) error {
 	return self.client.RemoveBucket(context.Background(), bucket)
 }
 
-// TODO: clean up
+// DeleteFile - deletes a file on the minio storage
+func (self *MinIOStorage) DeleteFile(remotefile string) error {
+	bucket, remotefilename := parseFilename(remotefile)
+	return self.client.RemoveObject(context.Background(), bucket, remotefilename, minio.RemoveObjectOptions{})
+}
+
 type MinIOFileReader struct {
 	object *minio.Object
 }
@@ -171,12 +174,8 @@ func (self *MinIOFileReader) Close() error {
 	return self.object.Close()
 }
 
-// TODO: clean above up
-
-func (self *MinIOStorage) GetFileReader(filename string) (VirtualFileReader, error) {
-	bucket, remotefilename := parseFilename(filename)
-
-	object, err := self.client.GetObject(context.Background(), bucket, remotefilename, minio.GetObjectOptions{})
+func (self *MinIOStorage) GetFileReader(fileurl *FileUrl) (VirtualFileReader, error) {
+	object, err := self.client.GetObject(context.Background(), fileurl.Storage, fileurl.FilePath, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -186,46 +185,38 @@ func (self *MinIOStorage) GetFileReader(filename string) (VirtualFileReader, err
 	}, nil
 }
 
-// DownloadFile - copies a file from the minio storage to the environment writer
-func (self *MinIOStorage) DownloadFile(remotefile string, localfile string) error {
-	bucket, remotefilename := parseFilename(remotefile)
-
-	object, err := self.client.GetObject(context.Background(), bucket, remotefilename, minio.GetObjectOptions{})
-	if err != nil {
-		return err
-	}
-	defer object.Close()
-
-	writer, err := self.environment.FileWriter(localfile)
-	if err != nil {
-		return err
-	}
-	defer writer.Close()
-
-	_, err = io.Copy(writer, object)
-	return err
+type MinIOFileWriter struct {
+	writer *io.PipeWriter
 }
 
-// UploadFile - copies a file to the minio storage
-func (self *MinIOStorage) UploadFile(localfile string, remotefile string) error {
-	bucket, remotefilename := parseFilename(remotefile)
-
-	reader, err := self.environment.FileReader(localfile)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-
-	_, err = self.client.PutObject(context.Background(), bucket, remotefilename, reader, -1, minio.PutObjectOptions{
-		//ContentType: "application/octet-stream",
-	})
-	return err
+func (self *MinIOFileWriter) Write(p []byte) (n int, err error) {
+	return self.writer.Write(p)
 }
 
-// DeleteFile - deletes a file on the minio storage
-func (self *MinIOStorage) DeleteFile(remotefile string) error {
-	bucket, remotefilename := parseFilename(remotefile)
-	return self.client.RemoveObject(context.Background(), bucket, remotefilename, minio.RemoveObjectOptions{})
+func (self *MinIOFileWriter) Close() error {
+	self.writer.CloseWithError(io.EOF)
+	return nil
+}
+
+func (self *MinIOStorage) GetFileWriter(fileurl *FileUrl) (VirtualFileWriter, error) {
+	// create writer pipe
+	reader, writer := io.Pipe()
+
+	// TODO: can we expose the error here?
+	go func() {
+		_, err := self.client.PutObject(context.Background(), fileurl.Storage, fileurl.FilePath, reader, -1, minio.PutObjectOptions{
+			//ContentType: "application/octet-stream",
+		})
+		if err != nil {
+			fmt.Printf("PutObject error: %s\n", err)
+			//	return nil, err
+			return
+		}
+	}()
+
+	return &MinIOFileWriter{
+		writer: writer,
+	}, nil
 }
 
 // Close - closes the minio connection

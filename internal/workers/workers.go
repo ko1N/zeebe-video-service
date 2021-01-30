@@ -2,20 +2,22 @@ package workers
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/ko1N/zeebe-video-service/internal/environment"
-	"github.com/ko1N/zeebe-video-service/internal/services"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/zbc"
+
+	"github.com/ko1N/zeebe-video-service/internal/environment"
+	"github.com/ko1N/zeebe-video-service/internal/environment/filesystem"
+	"github.com/ko1N/zeebe-video-service/internal/services"
 )
 
 type WorkerContext struct {
 	// headers, variables, close handlers, etc
 	Headers        map[string]string
 	Variables      map[string]interface{}
+	FileSystem     filesystem.FileSystem
 	Environment    environment.Environment
 	Tracker        *services.Tracker
 	ServiceContext *services.ServiceContext
@@ -39,24 +41,55 @@ func WorkerHandler(client zbc.Client, handler func(ctx *WorkerContext) error) fu
 			return
 		}
 
+		// create tracker
+		tracker := services.NewTracker(client, job)
+
+		var fs filesystem.FileSystem
+		{
+			fsConf := "disk"
+			if fileSystem, ok := headers["filesystem"]; ok {
+				fsConf = fileSystem
+			}
+
+			tracker.Info("loading filesystem", "fs", fsConf)
+
+			// TODO: configurable path
+			switch fsConf {
+			case "virtual", "fuse":
+
+				fs, err = filesystem.CreateVirtualFS()
+				break
+
+			//case "disk":
+			default:
+				fs, err = filesystem.CreateDiskFS()
+				break
+			}
+
+			if err != nil {
+				tracker.Crit("failure loading filesystem", "fs", fsConf, "err", err)
+				failJob(jobClient, job)
+				return
+			}
+		}
+		defer fs.Close()
+
 		// create environment
-		// TODO: configurable path + sandboxing :)
-		env, err := environment.CreateNativeEnvironment()
+		env, err := environment.CreateNativeEnvironment(fs)
 		if err != nil {
-			// failed to parse source url
-			fmt.Println("Failed to setup environment")
+			tracker.Crit("failure loading native environment", "err", err)
 			failJob(jobClient, job)
 			return
 		}
 		defer env.Close()
 
 		// create context
-		tracker := services.NewTracker(client, job)
 		serviceContext := services.NewServiceContext(env, tracker)
 
 		workerContext := WorkerContext{
 			Headers:        headers,
 			Variables:      variables,
+			FileSystem:     fs,
 			Environment:    env,
 			Tracker:        tracker,
 			ServiceContext: serviceContext,
@@ -67,6 +100,9 @@ func WorkerHandler(client zbc.Client, handler func(ctx *WorkerContext) error) fu
 			failJob(jobClient, job)
 			return
 		}
+
+		// flush all filesystem operations
+		fs.Flush()
 
 		request, err := client.
 			NewCompleteJobCommand().

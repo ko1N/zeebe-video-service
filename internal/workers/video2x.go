@@ -2,11 +2,7 @@ package workers
 
 import (
 	"fmt"
-	"net/url"
-	"path"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
@@ -34,24 +30,30 @@ func video2xHandler(conf *config.Video2xConfig) func(ctx *WorkerContext) error {
 			return fmt.Errorf("`source` variable must not be empty")
 		}
 
-		url, err := url.Parse(source.(string))
+		target := ctx.Variables["target"]
+		if target == "" {
+			return fmt.Errorf("`target` variable must not be empty")
+		}
+
+		sourceUrl, err := storage.ParseFileUrl(source.(string))
 		if err != nil {
 			return fmt.Errorf("unable to parse url in `source` variable: %s", err.Error())
 		}
 
-		ctx.Tracker.Info("connecting to storage at", "source", source)
-		store, err := storage.ConnectStorage(ctx.Environment, url)
+		targetUrl, err := storage.ParseFileUrl(target.(string))
 		if err != nil {
-			return fmt.Errorf("failed to connect to storage: %s", err.Error())
+			return fmt.Errorf("unable to parse url in `target` variable: %s", err.Error())
 		}
-		defer store.Close()
 
-		// download file
-		dirname, filename := filepath.Split(url.Path)
-		ctx.Tracker.Info("downloading from storage", "src", url.Path, "dest", filename)
-		err = store.DownloadFile(url.Path, filename)
+		// add input + output
+		err = ctx.FileSystem.AddInput(sourceUrl)
 		if err != nil {
-			return fmt.Errorf("failed to download file from storage: %s", err.Error())
+			return fmt.Errorf("unable to add input file '%s': %s", sourceUrl.URL.String(), err.Error())
+		}
+
+		err = ctx.FileSystem.AddOutput(targetUrl)
+		if err != nil {
+			return fmt.Errorf("unable to add output file '%s': %s", targetUrl.URL.String(), err.Error())
 		}
 
 		// parse arguments
@@ -70,21 +72,11 @@ func video2xHandler(conf *config.Video2xConfig) func(ctx *WorkerContext) error {
 		ctx.Tracker.Info("video2x settings", "driver", driver, "ratio", ratio)
 
 		// run video2x
-		outfilename := fmt.Sprintf("%s_upscaled%s", strings.TrimSuffix(filename, filepath.Ext(filename)), filepath.Ext(filename))
-		err = services.ExecuteVideo2x(ctx.ServiceContext, conf, driver, ratio, filename, outfilename)
+		err = services.ExecuteVideo2x(ctx.ServiceContext, conf, driver, ratio, sourceUrl.FilePath, targetUrl.FilePath)
 		if err != nil {
 			return fmt.Errorf("video2x failed: %s", err.Error())
 		}
 
-		// upload file
-		ctx.Tracker.Info("uploading to storage", "src", outfilename, "dest", path.Join(dirname, outfilename))
-		err = store.UploadFile(outfilename, path.Join(dirname, outfilename))
-		if err != nil {
-			return fmt.Errorf("failed to upload file to storage: %s", err.Error())
-		}
-
-		url.Path = path.Join(dirname, outfilename)
-		ctx.Variables["output"] = url.String()
 		ctx.Tracker.Info("video2x successful", "output", ctx.Variables["output"])
 		return nil
 	}

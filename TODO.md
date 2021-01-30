@@ -1,7 +1,7 @@
 - logs are malformed in zeebe (argument list)
-- ffmpeg service does not track output file / does not handle multiple input files
-- file upload/download and moving between file backends does not work
+- ffmpeg service does not handle multiple input files
 - watchfolder service
-- zero-copy file handling (when running on fs/shares/mounts)
-- rife --fps argument missing
-- file-copy-service should not save a file locally
+- Parse ffmpeg errors
+- implement virtualfs fallback for non sequential reads/writes by caching the file locally on a diskfs
+- clean todos
+- minio: create buckets when they do not exist on write

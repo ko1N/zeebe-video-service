@@ -1,22 +1,18 @@
 package storage
 
-/*
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
 
 	"github.com/hirochachacha/go-smb2"
-	"github.com/ko1N/zeebe-video-service/internal/environment"
 )
 
 // SmbStorage - describes a smb storage
 type SmbStorage struct {
-	environment environment.Environment
-	conn        net.Conn
-	session     *smb2.Session
+	conn    net.Conn
+	session *smb2.Session
 }
 
 // SmbConfig - config entry describing a storage config
@@ -27,7 +23,7 @@ type SmbConfig struct {
 }
 
 // ConnectSmb - opens a connection to smb and returns the connection object
-func ConnectSmb(env environment.Environment, conf *SmbConfig) (*SmbStorage, error) {
+func ConnectSmb(conf *SmbConfig) (*SmbStorage, error) {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:445", conf.Server))
 	if err != nil {
 		log.Fatalln(err)
@@ -48,9 +44,8 @@ func ConnectSmb(env environment.Environment, conf *SmbConfig) (*SmbStorage, erro
 	}
 
 	return &SmbStorage{
-		environment: env,
-		conn:        conn,
-		session:     session,
+		conn:    conn,
+		session: session,
 	}, nil
 }
 
@@ -128,66 +123,6 @@ func (self *SmbStorage) DeleteFolder(folder string) error {
 	return nil
 }
 
-// DownloadFile - copies a file from the smb storage to the environment writer
-func (self *SmbStorage) DownloadFile(remotefile string, localfile string) error {
-	share, remotefilename := parseFilename(remotefile)
-
-	// open mount
-	mount, err := self.session.Mount(share)
-	if err != nil {
-		return err
-	}
-	defer mount.Umount()
-
-	// open remote file
-	file, err := mount.Open(remotefilename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// open local file
-	writer, err := self.environment.FileWriter(localfile)
-	if err != nil {
-		return err
-	}
-	defer writer.Close()
-
-	// copy file
-	_, err = io.Copy(writer, file)
-	return err
-}
-
-// UploadFile - copies a file to the smb storage
-func (self *SmbStorage) UploadFile(localfile string, remotefile string) error {
-	share, remotefilename := parseFilename(remotefile)
-
-	// open local file
-	reader, err := self.environment.FileReader(localfile)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-
-	// open mount
-	mount, err := self.session.Mount(share)
-	if err != nil {
-		return err
-	}
-	defer mount.Umount()
-
-	// open remote file
-	file, err := mount.Create(remotefilename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// copy file
-	_, err = io.Copy(file, reader)
-	return err
-}
-
 // DeleteFile - deletes a file on the smb storage
 func (self *SmbStorage) DeleteFile(remotefile string) error {
 	share, remotefilename := parseFilename(remotefile)
@@ -216,9 +151,79 @@ func (self *SmbStorage) DeleteFile(remotefile string) error {
 	return nil
 }
 
+type SmbFile struct {
+	mount *smb2.Share
+	file  *smb2.File
+}
+
+func (self *SmbFile) Read(p []byte) (n int, err error) {
+	return self.file.Read(p)
+}
+
+func (self *SmbFile) Write(p []byte) (n int, err error) {
+	return self.file.Write(p)
+}
+
+func (self *SmbFile) Seek(offset int64, whence int) (int64, error) {
+	return self.file.Seek(offset, whence)
+}
+
+func (self *SmbFile) Size() (int64, error) {
+	info, err := self.file.Stat()
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
+func (self *SmbFile) Close() error {
+	err := self.file.Close()
+	if err != nil {
+		return err
+	}
+	return self.mount.Umount()
+}
+
+func (self *SmbStorage) GetFileReader(fileurl *FileUrl) (VirtualFileReader, error) {
+	// open mount
+	mount, err := self.session.Mount(fileurl.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	// open file
+	file, err := mount.Open(fileurl.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SmbFile{
+		mount: mount,
+		file:  file,
+	}, nil
+}
+
+func (self *SmbStorage) GetFileWriter(fileurl *FileUrl) (VirtualFileWriter, error) {
+	// open mount
+	mount, err := self.session.Mount(fileurl.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	// open file
+	file, err := mount.Create(fileurl.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SmbFile{
+		mount: mount,
+		file:  file,
+	}, nil
+}
+
 // Close - closes the samba connection
 func (self *SmbStorage) Close() {
 	self.session.Logoff()
 	self.conn.Close()
 }
-*/

@@ -24,13 +24,13 @@ func ExecuteVideo2x(ctx *ServiceContext, conf *config.Video2xConfig, driver stri
 		return fmt.Errorf("invalid video2x driver %s", driver)
 	}
 
-	fullfilename, err := filepath.Abs(ctx.Environment.FullPath(filename))
+	fullfilename, err := filepath.Abs(filename)
 	if err != nil {
 		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
 		return err
 	}
 
-	fulloutputfilename, err := filepath.Abs(ctx.Environment.FullPath(outputfilename))
+	fulloutputfilename, err := filepath.Abs(outputfilename)
 	if err != nil {
 		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
 		return err

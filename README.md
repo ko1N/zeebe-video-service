@@ -1,6 +1,18 @@
 # Zeebe Video Services
 
+<p align="center">
+<img src="docs/screenshot.png" alt="screenshot" title="screenshot" />
+</p>
+
 ## Available Services
+
+### file-copy-service
+
+The copyfiel service will copy a file from one storage to another
+
+Inputs:
+- source - path to the file (as uri)
+- target - the output file (as uri)
 
 ### ffmpeg-probe-service
 
@@ -18,6 +30,7 @@ The transcode service will run ``ffmpeg` on a file and also tracks the transcodi
 
 Inputs:
 - source - path to the file (as uri)
+- target - the output file (as uri)
 
 Outputs:
 - none
@@ -27,6 +40,7 @@ Headers:
     - An argument template that is passed to ffmpeg. The following variables can be used to replace parts of the string:
         
         {{.Source}} - The source input file
+        {{.Target}} - The target input file
 
 ### video2x-service
 
@@ -34,9 +48,7 @@ The video2x-service can upscale videos using several different backends. More in
 
 Inputs:
 - source - path to the file (as uri)
-
-Outputs:
-- output - path to the resulting output file (as uri)
+- target - the output file (as uri)
 
 Headers:
 - driver
@@ -55,9 +67,7 @@ The rife-service can generate intermediate frames for a video to artifically inc
 
 Inputs:
 - source - path to the file (as uri)
-
-Outputs:
-- output - path to the resulting output file (as uri)
+- target - the output file (as uri)
 
 Headers:
 - ratio - the ratio by which the number of frames will be increased

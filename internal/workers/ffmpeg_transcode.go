@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"net/url"
-	"path/filepath"
 	"time"
 
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
@@ -28,6 +26,7 @@ func RegisterFFmpegTranscodeWorker(client zbc.Client, conf *config.FFmpegConfig)
 
 type FFMpegArgs struct {
 	Source string
+	Target string
 }
 
 func ffmpegTranscodeHandler(conf *config.FFmpegConfig) func(ctx *WorkerContext) error {
@@ -37,28 +36,37 @@ func ffmpegTranscodeHandler(conf *config.FFmpegConfig) func(ctx *WorkerContext) 
 			return fmt.Errorf("`source` variable must not be empty")
 		}
 
-		url, err := url.Parse(source.(string))
+		target := ctx.Variables["target"]
+		if target == "" {
+			return fmt.Errorf("`target` variable must not be empty")
+		}
+
+		sourceUrl, err := storage.ParseFileUrl(source.(string))
 		if err != nil {
 			return fmt.Errorf("unable to parse url in `source` variable: %s", err.Error())
 		}
 
-		ctx.Tracker.Info("connecting to storage at", "source", source)
-		store, err := storage.ConnectStorage(ctx.Environment, url)
+		targetUrl, err := storage.ParseFileUrl(target.(string))
 		if err != nil {
-			return fmt.Errorf("failed to connect to storage: %s", err.Error())
+			return fmt.Errorf("unable to parse url in `target` variable: %s", err.Error())
 		}
-		defer store.Close()
 
-		// download file
-		_, filename := filepath.Split(url.Path)
-		ctx.Tracker.Info("downloading from storage", "src", url.Path, "dest", filename)
-		err = store.DownloadFile(url.Path, filename)
+		// add input + output
+		err = ctx.FileSystem.AddInput(sourceUrl)
 		if err != nil {
-			return fmt.Errorf("failed to download file from storage: %s", err.Error())
+			return fmt.Errorf("unable to add input file '%s': %s", sourceUrl.URL.String(), err.Error())
+		}
+
+		err = ctx.FileSystem.AddOutput(targetUrl)
+		if err != nil {
+			return fmt.Errorf("unable to add output file '%s': %s", targetUrl.URL.String(), err.Error())
 		}
 
 		// ffmpeg
-		argopts := FFMpegArgs{Source: filename}
+		argopts := FFMpegArgs{
+			Source: sourceUrl.FilePath,
+			Target: targetUrl.FilePath,
+		}
 		argtpl, err := template.New("args").Parse(ctx.Headers["args"])
 		if err != nil {
 			return fmt.Errorf("invalid ffmpeg args")

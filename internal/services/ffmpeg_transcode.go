@@ -36,7 +36,9 @@ func ExecuteFFmpegTranscode(ctx *ServiceContext, conf *config.FFmpegConfig, cmd 
 	result, err := ctx.Environment.Execute(
 		cmdline[0], append(cmdline[1:], []string{executable + " -v warning -progress /dev/stdout " + cmd}...),
 		func(outmsg string) {
-			//fmt.Println(outmsg)
+			// TODO: detect true ffmpeg errors
+			//ctx.Tracker.Info(outmsg, "stream", "stdout")
+
 			s := strings.Split(outmsg, "=")
 			if len(s) == 2 && s[0] == "out_time_us" {
 				time, err := strconv.Atoi(s[1])
@@ -47,7 +49,8 @@ func ExecuteFFmpegTranscode(ctx *ServiceContext, conf *config.FFmpegConfig, cmd 
 			}
 		},
 		func(errmsg string) {
-			//fmt.Println(errmsg)
+			// TODO: detect true ffmpeg errors
+			//ctx.Tracker.Info(errmsg, "stream", "stderr")
 		})
 	if err != nil {
 		ctx.Tracker.Crit("execution of ffmpeg failed")
