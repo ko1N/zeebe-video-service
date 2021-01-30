@@ -4,11 +4,51 @@
 <img src="docs/screenshot.png" alt="screenshot" title="screenshot" />
 </p>
 
+This project aims to provide services that allow for working with files (especially video files) in the [zeebe microservice orchestration workflow engine](https://github.com/zeebe-io/zeebe). The services are built to work in a serverless environment.
+
+## Filestores
+
+Filestores are backends that persistently store files. The file URL-Scheme let's the services decide what backend store to use.
+
+File URL's are specified in the following format:
+```
+scheme://user:password@host/[storage]/[filepath]
+```
+
+Currently the following stores are implemented:
+
+- `smb`
+
+    Connects to a samba/cifs share.
+    The `storage` path of the url must match the samba share on the server.
+    Seeking is supported for both reading and writing files.
+
+- `minio`
+
+    Connects to a minio object store.
+    The `storage` path of the url must match the bucket on the minio server.
+    Seeking is only supported when reading files.
+
+## Filesystems
+
+The filesystem is the local storage for each service. When a file is accessed from one of the filestores it is made available through the selected filesystem.
+The filesystem for each service can be customized directly in the BPMN. 
+
+Simply set the `filesystem` Header to one of the available filesystems:
+
+- `disk`
+
+    The disk filesystem can be used when seek support is crucial for reading and writing files. This filesystem simply copies all files from the storage into a local temp folder and also uploads processed files directly from the filesystem.
+
+- `virtual`
+
+    The virtual filesystem utilizes fuse to create virtual files for reading and writing. Depending on the backend file store in use it can support file seeking. If a tool tries to seek while reading/writing a file with a backend store that doesn't support it, it will currently return an error.
+
 ## Available Services
 
 ### file-copy-service
 
-The copyfiel service will copy a file from one storage to another
+The file-copy-service service will copy a file from one storage to another. It directly streams the files from one store to another without storing a local copy. The service simply acts as a proxy.
 
 Inputs:
 - source - path to the file (as uri)
