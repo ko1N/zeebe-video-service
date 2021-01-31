@@ -29,7 +29,11 @@ type VirtualFS struct {
 }
 
 func (self *VirtualFS) AddInput(input *storage.FileUrl) error {
-	// TODO: check if node was added already
+	for _, in := range self.inputs {
+		if in.FilePath == input.FilePath {
+			return fmt.Errorf("input file already added\n")
+		}
+	}
 
 	self.addNode(input, &vfsInputFile{
 		input: input,
@@ -40,7 +44,11 @@ func (self *VirtualFS) AddInput(input *storage.FileUrl) error {
 }
 
 func (self *VirtualFS) AddOutput(output *storage.FileUrl) error {
-	// TODO: prevent output with same name
+	for _, out := range self.outputs {
+		if out.FilePath == output.FilePath {
+			return fmt.Errorf("output file already added\n")
+		}
+	}
 
 	// for outputs we won't add the node unless `Create` is called.
 	self.outputs = append(self.outputs, output)
@@ -212,7 +220,7 @@ func (self *vfsInputFile) Getattr(ctx context.Context, f fs.FileHandle, out *fus
 	const bs = 512
 	out.Blksize = bs
 	out.Blocks = (out.Size + bs - 1) / bs
-	return 0
+	return syscall.F_OK
 }
 
 // Open lazily unpacks zip data
@@ -230,7 +238,7 @@ func (self *vfsInputFile) Open(ctx context.Context, flags uint32) (fs.FileHandle
 	// We don't return a filehandle since we don't really need
 	// one.  The file content is immutable, so hint the kernel to
 	// cache the data.
-	return nil, fuse.FOPEN_KEEP_CACHE, 0
+	return nil, fuse.FOPEN_KEEP_CACHE, syscall.F_OK
 }
 
 // Read simply returns the data that was already unpacked in the Open call
@@ -255,7 +263,7 @@ func (self *vfsInputFile) Read(ctx context.Context, f fs.FileHandle, dest []byte
 			}
 		} else {
 			fmt.Printf("Unable to do non sequential writes on backend\n")
-			return fuse.ReadResultData([]byte{}), syscall.EILSEQ // TODO:
+			return fuse.ReadResultData([]byte{}), syscall.EIO
 		}
 	}
 
@@ -275,7 +283,7 @@ func (self *vfsInputFile) Read(ctx context.Context, f fs.FileHandle, dest []byte
 	}
 	self.offset += int64(read)
 
-	return fuse.ReadResultData(buffer), 0
+	return fuse.ReadResultData(buffer), syscall.F_OK
 }
 
 func (self *vfsInputFile) Flush(ctx context.Context, f fs.FileHandle) syscall.Errno {
@@ -295,7 +303,7 @@ func (self *vfsInputFile) Flush(ctx context.Context, f fs.FileHandle) syscall.Er
 		self.storage = nil
 	}
 
-	return 0
+	return syscall.F_OK
 }
 
 type vfsOutputFile struct {
@@ -374,7 +382,7 @@ func (self *vfsOutputFile) Write(ctx context.Context, f fs.FileHandle, data []by
 			}
 		} else {
 			fmt.Printf("Unable to do non sequential writes on backend\n")
-			return 0, syscall.EILSEQ // TODO:
+			return 0, syscall.EIO
 		}
 	}
 
@@ -385,7 +393,7 @@ func (self *vfsOutputFile) Write(ctx context.Context, f fs.FileHandle, data []by
 	}
 	self.offset += int64(written)
 
-	return uint32(written), 0
+	return uint32(written), syscall.F_OK
 }
 
 func (self *vfsOutputFile) Flush(ctx context.Context, f fs.FileHandle) syscall.Errno {
@@ -405,7 +413,7 @@ func (self *vfsOutputFile) Flush(ctx context.Context, f fs.FileHandle) syscall.E
 		self.storage = nil
 	}
 
-	return 0
+	return syscall.F_OK
 }
 
 func CreateVirtualFS() (*VirtualFS, error) {

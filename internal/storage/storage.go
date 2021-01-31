@@ -17,7 +17,7 @@ type File struct {
 	Size        int64
 }
 
-// TODO: custom interface
+// TODO: use Stat instead of Size() ?
 type VirtualFileReader interface {
 	io.Reader
 	//io.Seeker // optional
@@ -101,6 +101,7 @@ func ParseFileUrl(fileuri string) (*FileUrl, error) {
 	dir, fileName := filepath.Split(filePath)
 
 	// TODO: path.Clean() would be better than trimming the suffix
+	// but path.Clean() leads to a "." on empty paths
 	return &FileUrl{
 		URL:      url,
 		Storage:  splitPath[0],

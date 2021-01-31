@@ -20,7 +20,12 @@ type DiskFS struct {
 }
 
 func (self *DiskFS) AddInput(input *storage.FileUrl) error {
-	// TODO: check if node was added already
+	for _, in := range self.inputs {
+		if in.FilePath == input.FilePath {
+			return fmt.Errorf("input file already added\n")
+		}
+	}
+
 	self.inputs = append(self.inputs, input)
 
 	// connect to storage
@@ -61,7 +66,11 @@ func (self *DiskFS) AddInput(input *storage.FileUrl) error {
 }
 
 func (self *DiskFS) AddOutput(output *storage.FileUrl) error {
-	// TODO: prevent output with same name
+	for _, out := range self.outputs {
+		if out.FilePath == output.FilePath {
+			return fmt.Errorf("output file already added\n")
+		}
+	}
 
 	// for outputs we won't upload the files unless `Close` is called.
 	self.outputs = append(self.outputs, output)

@@ -5,3 +5,5 @@
 - implement virtualfs fallback for non sequential reads/writes by caching the file locally on a diskfs
 - clean todos
 - minio: create buckets when they do not exist on write
+- sanitize service inputs
+- add another db for storing detailed logs (influx maybe?)
