@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # setup docker buildx env
-docker buildx create --use
+#docker buildx create --use
 
 # build multi-arch containers
 docker buildx build --platform linux/amd64,linux/arm64 -t files-service -f build/files-service.dockerfile .

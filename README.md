@@ -6,6 +6,8 @@
 
 This project aims to provide services that allow for working with files (especially video files) in the [zeebe microservice orchestration workflow engine](https://github.com/zeebe-io/zeebe). The services are built to work in a serverless environment.
 
+### this project is in early development and not yet considered to be production ready.
+
 ## Filestores
 
 Filestores are backends that persistently store files. The file URL-Scheme let's the services decide what backend store to use.

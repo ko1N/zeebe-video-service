@@ -1,9 +1,0 @@
-- logs are malformed in zeebe (argument list)
-- ffmpeg service does not handle multiple input files
-- watchfolder service
-- Parse ffmpeg errors
-- implement virtualfs fallback for non sequential reads/writes by caching the file locally on a diskfs
-- clean todos
-- minio: create buckets when they do not exist on write
-- sanitize service inputs
-- add another db for storing detailed logs (influx maybe?)
