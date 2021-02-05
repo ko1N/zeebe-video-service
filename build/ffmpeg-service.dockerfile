@@ -5,7 +5,7 @@ COPY . .
 
 WORKDIR /app/cmd
 RUN go get
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-w -extldflags "-static"' -o video-service.out
+RUN CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w -extldflags "-static"' -o video-service.out
 
 # deploy
 FROM alpine:latest
