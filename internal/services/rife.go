@@ -1,7 +1,6 @@
 package services
 
 import (
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -9,19 +8,7 @@ import (
 )
 
 func ExecuteRife(ctx *ServiceContext, conf *config.RifeConfig, ratio int, uhd bool, skip bool, filename string, outputfilename string) error {
-	fullfilename, err := filepath.Abs(filename)
-	if err != nil {
-		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
-		return err
-	}
-
-	fulloutputfilename, err := filepath.Abs(outputfilename)
-	if err != nil {
-		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
-		return err
-	}
-
-	ctx.Tracker.Info("rife files", "input", fullfilename, "output", fulloutputfilename)
+	ctx.Tracker.Info("rife files", "input", filename, "output", outputfilename)
 
 	// upsample input
 	executable := "python3 /rife/inference_video.py"
@@ -30,7 +17,7 @@ func ExecuteRife(ctx *ServiceContext, conf *config.RifeConfig, ratio int, uhd bo
 	}
 	cmdline := strings.Split(executable, " ")
 
-	args := []string{"--exp", strconv.Itoa(ratio), "--video", fullfilename, "--output", fulloutputfilename}
+	args := []string{"--exp", strconv.Itoa(ratio), "--video", filename, "--output", outputfilename}
 	if skip {
 		args = append(args, "--skip")
 	}
@@ -38,7 +25,7 @@ func ExecuteRife(ctx *ServiceContext, conf *config.RifeConfig, ratio int, uhd bo
 		args = append(args, "--UHD")
 	}
 
-	_, err = ctx.Environment.Execute(
+	_, err := ctx.Environment.Execute(
 		cmdline[0], append(cmdline[1:], args...),
 		func(outmsg string) {
 			ctx.Tracker.Info(outmsg, "stream", "stdout")

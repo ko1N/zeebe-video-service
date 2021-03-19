@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -24,19 +23,7 @@ func ExecuteVideo2x(ctx *ServiceContext, conf *config.Video2xConfig, driver stri
 		return fmt.Errorf("invalid video2x driver %s", driver)
 	}
 
-	fullfilename, err := filepath.Abs(filename)
-	if err != nil {
-		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
-		return err
-	}
-
-	fulloutputfilename, err := filepath.Abs(outputfilename)
-	if err != nil {
-		ctx.Tracker.Crit("unable to get fullpath of file", "error", err)
-		return err
-	}
-
-	ctx.Tracker.Info("video2x files", "input", fullfilename, "output", fulloutputfilename)
+	ctx.Tracker.Info("video2x files", "input", filename, "output", outputfilename)
 
 	// upscale input
 	executable := "python3.8 /video2x/src/video2x.py"
@@ -45,8 +32,8 @@ func ExecuteVideo2x(ctx *ServiceContext, conf *config.Video2xConfig, driver stri
 	}
 	cmdline := strings.Split(executable, " ")
 
-	_, err = ctx.Environment.Execute(
-		cmdline[0], append(cmdline[1:], []string{"-d", driver, "-r", strconv.Itoa(ratio), "-i", fullfilename, "-o", fulloutputfilename}...),
+	_, err := ctx.Environment.Execute(
+		cmdline[0], append(cmdline[1:], []string{"-d", driver, "-r", strconv.Itoa(ratio), "-i", filename, "-o", outputfilename}...),
 		func(outmsg string) {
 			ctx.Tracker.Info(outmsg, "stream", "stdout")
 		},
