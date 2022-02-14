@@ -14,7 +14,7 @@ ffmpeg:
   ffmpeg: "/usr/bin/ffmpeg"
 
 video2x:
-  executable: "python3.8 /video2x/src/video2x.py"
+  executable: "python3.9 /video2x/src/video2x.py"
 
 rife:
   executable: "python3 /rife/inference_video.py"

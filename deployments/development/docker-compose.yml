@@ -33,12 +33,13 @@ services:
     image: minio/minio:latest
     ports:
       - "9000:9000"
+      - "9090:9090"
     environment:
-      MINIO_ACCESS_KEY: "minio"
-      MINIO_SECRET_KEY: "miniominio"
+      MINIO_ROOT_USER: "minio"
+      MINIO_ROOT_PASSWORD: "miniominio"
     volumes:
       - minio_data:/data
-    command: server /data/minio
+    command: server /data/minio --console-address ":9090"
     networks:
       - zeebe_network
 

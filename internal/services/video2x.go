@@ -26,7 +26,7 @@ func ExecuteVideo2x(ctx *ServiceContext, conf *config.Video2xConfig, driver stri
 	ctx.Tracker.Info("video2x files", "input", filename, "output", outputfilename)
 
 	// upscale input
-	executable := "python3.8 /video2x/src/video2x.py"
+	executable := "python3.9 /video2x/src/video2x.py"
 	if conf != nil {
 		executable = conf.Executable
 	}

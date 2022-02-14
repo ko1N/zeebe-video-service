@@ -7,7 +7,7 @@ ffmpeg:
   ffmpeg: "ffmpeg"
 
 video2x:
-  executable: "python3.8 /video2x/src/video2x.py"
+  executable: "python3.9 /home/patrick/Documents/Projects/zeebe/video2x/src/video2x.py"
 
 rife:
-  executable: "python3 /rife/inference_video.py --model /rife/train_log/"
+  executable: "python3 /home/patrick/Documents/Projects/zeebe/arXiv2020-RIFE/inference_video.py --model /home/patrick/Documents/Projects/zeebe/arXiv2020-RIFE/train_log/"
